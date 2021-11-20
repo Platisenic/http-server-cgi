@@ -13,44 +13,82 @@ public:
     : socket_(std::move(socket)) {}
 
   void start(){
-    do_read();
+    read_request();
   }
 
 private:
-  void do_read(){
+  void read_request(){
     auto self(shared_from_this());
     socket_.async_read_some(boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, std::size_t /*length*/){
+          std::cout << data_ << std::endl;
           if (!ec){
-            do_write();
+            process_request();
           }
         });
   }
 
-  void do_write(){
+  void process_request(){
+    auto self(shared_from_this());
+    std::stringstream ss(data_);
+    std::string line_str;
+    while(getline(ss, line_str)){
+      parsed_data_.push_back(line_str);
+    }
+    ss.str("");
+    ss.clear();
+    ss << parsed_data_.front();
+    ss >> request_method >> target >> http_version;
+    std::size_t foundq = target.find("?");
+    if(foundq == std::string::npos){
+      request_uri = target;
+      exec_cgi = "." + request_uri;
+      query_string = "";
+    }else{
+      request_uri = target.substr(0, foundq);
+      exec_cgi = "." + request_uri;
+      query_string = target.substr(foundq+1);
+    }
+    ss.str("");
+    ss.clear();
+    ss << parsed_data_.at(1);
+    ss >> un_used >> http_host;
+    server_protocol = "TCP";
+    server_addr = socket_.local_endpoint().address().to_string();
+    server_port = std::to_string(socket_.local_endpoint().port());
+    remote_addr = socket_.remote_endpoint().address().to_string();
+    remote_port = std::to_string(socket_.remote_endpoint().port());
+   
+    write_response();
+  }
+
+  void write_response(){
     auto self(shared_from_this());
     boost::asio::async_write(socket_, boost::asio::buffer(success_status, strlen(success_status)),
         [this, self](boost::system::error_code ec, std::size_t /*length*/){
           if (!ec){
             while((pid = fork()) < 0) { usleep(1000);}
             if(pid == 0){ // child
+              setenv("REQUEST_METHOD", request_method.c_str(), 1);
+              setenv("REQUEST_URI", request_uri.c_str(), 1);
+              setenv("QUERY_STRING", query_string.c_str(), 1);
+              setenv("SERVER_PROTOCOL", server_protocol.c_str(), 1);
+              setenv("HTTP_HOST", http_host.c_str(), 1);
+              setenv("SERVER_ADDR", server_addr.c_str(), 1);
+              setenv("SERVER_PORT", server_port.c_str(), 1);
+              setenv("REMOTE_ADDR", remote_addr.c_str(), 1);
+              setenv("REMOTE_PORT", remote_port.c_str(), 1);
+
               dup2(socket_.native_handle(), STDIN_FILENO);
               dup2(socket_.native_handle(), STDOUT_FILENO);
               dup2(socket_.native_handle(), STDERR_FILENO);
-              self->socket_.close();
+              socket_.close();
 
-              int ret = execlp(exec_pannel, exec_pannel, NULL);
-              if(ret < 0){ //TODO Handle Error
-                // std::cout << "Content-type: text/html\r\n\r\n"
-                //           << "<!DOCTYPE html>\n"
-                //           << "<html lang=\"en\">\n"
-                //           << "<h1> CGI not found </h1>\n"
-                //           << "</html>\n";
-              }
+              int ret = execlp(exec_cgi.c_str(), exec_cgi.c_str(), NULL);
+              if(ret < 0){} //TODO Handle Error
             }else{ // parent
-              self->socket_.close();
+              socket_.close();
             }
-            do_read();
           }
         });
   }
@@ -58,7 +96,20 @@ private:
   tcp::socket socket_;
   enum { max_length = 1024 };
   char data_[max_length];
-  char exec_pannel[200] = "./panel.cgi";
+  std::vector<std::string> parsed_data_;
+  std::string request_method;
+  std::string request_uri;
+  std::string query_string;
+  std::string server_protocol;
+  std::string http_host;
+  std::string server_addr;
+  std::string server_port;
+  std::string remote_addr;
+  std::string remote_port;
+  std::string exec_cgi;
+  std::string target;
+  std::string http_version;
+  std::string un_used;
   char success_status[200] = "HTTP/1.1 200 OK\r\n";
 };
 
