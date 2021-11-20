@@ -2,6 +2,9 @@
 #include <iostream>
 #include <memory>
 #include <utility>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <boost/asio.hpp>
 
 using boost::asio::ip::tcp;
@@ -42,11 +45,11 @@ private:
     std::size_t foundq = target.find("?");
     if(foundq == std::string::npos){
       request_uri = target;
-      exec_cgi = "." + request_uri;
+      exec_cgi = "." + target;
       query_string = "";
     }else{
-      request_uri = target.substr(0, foundq);
-      exec_cgi = "." + request_uri;
+      request_uri = target;
+      exec_cgi = "." + target.substr(0, foundq);
       query_string = target.substr(foundq+1);
     }
     ss.str("");
@@ -116,11 +119,24 @@ private:
 class http_server{
 public:
   http_server(boost::asio::io_context& io_context, short port)
-    : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)){
+    : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
+      signal_(io_context, SIGCHLD)
+  {
+    wait_for_signal();
     do_accept();
   }
 
 private:
+  void wait_for_signal(){
+    signal_.async_wait(
+        [this](boost::system::error_code /*ec*/, int /*signo*/)
+        {
+            int status = 0;
+            while (waitpid(-1, &status, WNOHANG) > 0) {}
+            wait_for_signal();
+        });
+  }
+
   void do_accept(){
     acceptor_.async_accept(
         [this](boost::system::error_code ec, tcp::socket socket){
@@ -132,6 +148,7 @@ private:
   }
 
   tcp::acceptor acceptor_;
+  boost::asio::signal_set signal_;
 };
 
 int main(int argc, char* argv[]){
