@@ -24,6 +24,7 @@ print('''
 <html lang="en">
   <head>
     <title>NP Project 3 Panel</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"

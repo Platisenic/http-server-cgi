@@ -9,28 +9,32 @@
 
 using boost::asio::ip::tcp;
 
-class client_connection : public std::enable_shared_from_this<client_connection>
+class tcp_connection : public std::enable_shared_from_this<tcp_connection>
 {
 public:
-  client_connection(boost::asio::io_context& io_context, int session, std::string input_file)
+  tcp_connection(boost::asio::io_context& io_context, int session, std::string input_file)
     : session(session),
       resolver_(io_context),
       socket_(io_context),
       file_ifs_(input_file.c_str())
       {}
+
+  void start(std::string host , std::string port){
+    do_resolve(host, port);
+  }
   
-  void start_resolve(std::string host , std::string port){
+  void do_resolve(std::string host , std::string port){
     auto self(shared_from_this());
     resolver_.async_resolve(host, port,
     [this, self](boost::system::error_code ec, tcp::resolver::iterator endpoint_iterator){
       if(!ec){
         endpoint_iterator_ = endpoint_iterator;
-        start_connect();
+        do_connect();
       }
     });
   }
 
-  void start_connect(){
+  void do_connect(){
     auto self(shared_from_this());
     socket_.async_connect(*endpoint_iterator_,
     [this, self](boost::system::error_code ec){
@@ -99,7 +103,6 @@ struct connection_info{
 int main(){
   try{
     boost::asio::io_context io_context;
-    // std::string query_string = "h0=localhost&p0=5556&f0=t1.txt&h1=&p1=&f1=&h2=&p2=&f2=&h3=&p3=&f3=&h4=&p4=&f4=";
     std::string query_string(getenv("QUERY_STRING"));
     std::stringstream ss(query_string);
     std::string parsed_string;
@@ -113,8 +116,8 @@ int main(){
     for(int i=0 ; i<5; i++){
       if(conn_infos[i].is_valid()){
         printTableTitle(i, conn_infos[i].host, conn_infos[i].port);
-        std::make_shared<client_connection>(io_context, i, conn_infos[i].filename)
-          ->start_resolve(conn_infos[i].host, conn_infos[i].port);
+        std::make_shared<tcp_connection>(io_context, i, conn_infos[i].filename)
+          ->start(conn_infos[i].host, conn_infos[i].port);
       }
     }
 

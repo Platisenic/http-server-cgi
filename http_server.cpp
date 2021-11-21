@@ -24,8 +24,6 @@ private:
     auto self(shared_from_this());
     socket_.async_read_some(boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, std::size_t length){
-          std::string data(data_, data_+length);
-          std::cout << data << std::endl;
           if (!ec){
             process_request(length);
           }
@@ -35,6 +33,7 @@ private:
   void process_request(std::size_t length){
     auto self(shared_from_this());
     std::string data(data_, data_+length);
+    std::cout << data;
     std::stringstream ss(data);
     std::string line_str;
     while(std::getline(ss, line_str)){

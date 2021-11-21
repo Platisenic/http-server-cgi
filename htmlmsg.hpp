@@ -5,10 +5,12 @@
 
 void escape(std::string &content){
     boost::replace_all(content, "&", "&amp;");
+    boost::replace_all(content, "\r", "");
     boost::replace_all(content, "\n", "&NewLine;");
     boost::replace_all(content, "<", "&lt;");
     boost::replace_all(content, ">", "&gt;");
-    boost::replace_all(content, "\'", "&#x27;");
+    boost::replace_all(content, "\'", "&#39;");
+    boost::replace_all(content, "\"", "&#34;");
 }
 
 void printShell(int session, std::string content){
@@ -40,7 +42,7 @@ void printHtmlHead(){
 
 void printBodyHead(){
     std::cout <<    "<head>\n"
-              <<        "<meta charset=\"UTF-8\" />\n"
+              <<        "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
               <<        "<title>NP Project 3 Sample Console</title>\n"
               <<        "<link\n"
               <<        "rel=\"stylesheet\"\n"
