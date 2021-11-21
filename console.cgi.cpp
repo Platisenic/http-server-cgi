@@ -4,14 +4,16 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <sstream>
 
 using boost::asio::ip::tcp;
 
 class client_connection : public std::enable_shared_from_this<client_connection>
 {
 public:
-  client_connection(boost::asio::io_context& io_context, std::string input_file)
-    : resolver_(io_context),
+  client_connection(boost::asio::io_context& io_context, int session, std::string input_file)
+    : session(session),
+      resolver_(io_context),
       socket_(io_context),
       file_ifs_(input_file.c_str())
       {}
@@ -39,31 +41,26 @@ public:
 
   void do_read(){
     auto self(shared_from_this());
-    socket_.async_read_some(boost::asio::buffer(read_buf_, max_length),
+    boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(read_buf_), "% ",
     [this, self](boost::system::error_code ec, std::size_t length){
-      if (!ec){
-        std::string data(read_buf_, read_buf_+length);
+      if(!ec){
+        std::string data(read_buf_.substr(0, length));
+        read_buf_.erase(0, length);
         std::cout << data;
         std::cout.flush();
-        size_t found = data.find("% ");
-        if(found != std::string::npos){
-          do_write();
-        }else{
-          do_read();
-        }
+        do_write();
       }
     });
   }
 
   void do_write(){
     auto self(shared_from_this());
-    std::string input_line;
-    std::getline(file_ifs_, input_line);
-    input_line += "\n";
-    std::cout << input_line;
+    write_buf_.clear();
+    std::getline(file_ifs_, write_buf_);
+    write_buf_ += "\n";
+    std::cout << write_buf_;
     std::cout.flush();
-    strcpy(write_buf_, input_line.c_str());
-    socket_.async_write_some(boost::asio::buffer(write_buf_, strlen(write_buf_)),
+    boost::asio::async_write(socket_, boost::asio::dynamic_buffer(write_buf_),
     [this, self](boost::system::error_code ec, std::size_t /*length*/){
       if(!ec){
         do_read();
@@ -71,13 +68,33 @@ public:
     });
   }
 private:
-  enum { max_length = 4096 };
-  char read_buf_[max_length];
-  char write_buf_[max_length];
+  int session;
+  std::string read_buf_;
+  std::string write_buf_;
   tcp::resolver resolver_;
   tcp::resolver::iterator endpoint_iterator_;
   tcp::socket socket_;
   std::ifstream file_ifs_;
+};
+
+struct connection_info{
+  connection_info() {}
+  void insert_element(char hpf, std::string value){
+      value.erase(0, 1);
+    if(hpf == 'h'){
+      host = value;
+    }else if(hpf == 'p'){
+      port = value;
+    }else if(hpf == 'f'){
+      filename = "test_case/" + value;
+    }
+  }
+  bool is_valid(){
+    return !host.empty() && !port.empty() && !filename.empty();
+  }
+  std::string host;
+  std::string port;
+  std::string filename;
 };
 
 int main(int argc, char* argv[])
@@ -85,11 +102,21 @@ int main(int argc, char* argv[])
   try
   {
     boost::asio::io_context io_context;
-    
-    std::string host = "localhost";
-    std::string port = "5556";
-    std::string fileinput = "test_case/t2.txt";
-    std::make_shared<client_connection>(io_context, fileinput)->start_resolve(host, port);
+    std::string query_string = "h0=localhost&p0=5556&f0=t1.txt&h1=&p1=&f1=&h2=&p2=&f2=&h3=&p3=&f3=&h4=&p4=&f4=";
+    std::stringstream ss(query_string);
+    std::string parsed_string;
+    connection_info conn_infos[5];
+    while(std::getline(ss, parsed_string, '&')){
+      conn_infos[parsed_string[1]-'0'].insert_element(parsed_string[0], parsed_string.substr(2));
+    }
+
+    for(int i=0 ; i<5; i++){
+      if(conn_infos[i].is_valid()){
+        std::make_shared<client_connection>(io_context, i, conn_infos[i].filename)
+          ->start_resolve(conn_infos[i].host, conn_infos[i].port);
+      }
+    }
+
     io_context.run();
   }
   catch (std::exception& e)
