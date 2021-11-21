@@ -18,10 +18,17 @@ $(CONSOLE_CGI): $(CONSOLE_CGI).cpp
 	$(CXX) $< -o $@ $(CXX_INCLUDE_PARAMS) $(CXX_LIB_PARAMS) $(CXXFLAGS)
 
 clean:
-	rm -f $(EXEC) $(CONSOLE_CGI)
+	rm -rf $(EXEC) $(CONSOLE_CGI) working_dir
 
 run: $(EXEC)
 	./$(EXEC) 3333
+
+run_np_single:
+	rm -rf working_dir
+	mkdir working_dir
+	cp test.html working_dir/test.html
+	cp -r bin working_dir/bin
+	cd working_dir && ./../np_single_golden 5556
 
 prepare:
 	mkdir -p bin
