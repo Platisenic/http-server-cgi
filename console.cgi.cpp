@@ -1,6 +1,4 @@
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <functional>
 #include <iostream>
 #include <string>
 #include <fstream>
