@@ -14,13 +14,13 @@ all: $(EXEC) $(CONSOLE_CGI)
 $(EXEC): $(EXEC).cpp
 	$(CXX) $< -o $@ $(CXX_INCLUDE_PARAMS) $(CXX_LIB_PARAMS) $(CXXFLAGS)
 
-$(CONSOLE_CGI): $(CONSOLE_CGI).cpp
+$(CONSOLE_CGI): $(CONSOLE_CGI).cpp htmlmsg.hpp
 	$(CXX) $< -o $@ $(CXX_INCLUDE_PARAMS) $(CXX_LIB_PARAMS) $(CXXFLAGS)
 
 clean:
 	rm -rf $(EXEC) $(CONSOLE_CGI) working_dir
 
-run: $(EXEC)
+run: all
 	./$(EXEC) 3333
 
 run_np_single:

@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include "htmlmsg.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -46,8 +47,7 @@ public:
       if(!ec){
         std::string data(read_buf_.substr(0, length));
         read_buf_.erase(0, length);
-        std::cout << data;
-        std::cout.flush();
+        printShell(session, data);
         do_write();
       }
     });
@@ -58,8 +58,7 @@ public:
     write_buf_.clear();
     std::getline(file_ifs_, write_buf_);
     write_buf_ += "\n";
-    std::cout << write_buf_;
-    std::cout.flush();
+    printCMD(session, write_buf_);
     boost::asio::async_write(socket_, boost::asio::dynamic_buffer(write_buf_),
     [this, self](boost::system::error_code ec, std::size_t /*length*/){
       if(!ec){
@@ -97,12 +96,11 @@ struct connection_info{
   std::string filename;
 };
 
-int main(int argc, char* argv[])
-{
-  try
-  {
+int main(){
+  try{
     boost::asio::io_context io_context;
-    std::string query_string = "h0=localhost&p0=5556&f0=t1.txt&h1=&p1=&f1=&h2=&p2=&f2=&h3=&p3=&f3=&h4=&p4=&f4=";
+    // std::string query_string = "h0=localhost&p0=5556&f0=t1.txt&h1=&p1=&f1=&h2=&p2=&f2=&h3=&p3=&f3=&h4=&p4=&f4=";
+    std::string query_string(getenv("QUERY_STRING"));
     std::stringstream ss(query_string);
     std::string parsed_string;
     connection_info conn_infos[5];
@@ -110,19 +108,19 @@ int main(int argc, char* argv[])
       conn_infos[parsed_string[1]-'0'].insert_element(parsed_string[0], parsed_string.substr(2));
     }
 
+    printHtmltemplate();
+
     for(int i=0 ; i<5; i++){
       if(conn_infos[i].is_valid()){
+        printTableTitle(i, conn_infos[i].host, conn_infos[i].port);
         std::make_shared<client_connection>(io_context, i, conn_infos[i].filename)
           ->start_resolve(conn_infos[i].host, conn_infos[i].port);
       }
     }
 
     io_context.run();
-  }
-  catch (std::exception& e)
-  {
+  }catch (std::exception& e){
     std::cerr << "Exception: " << e.what() << "\n";
   }
-
   return 0;
 }
