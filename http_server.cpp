@@ -33,7 +33,7 @@ private:
   void process_request(std::size_t length){
     auto self(shared_from_this());
     std::string data(data_, data_+length);
-    std::cout << data;
+    // std::cout << data;
     std::stringstream ss(data);
     std::string line_str;
     while(std::getline(ss, line_str)){
@@ -57,7 +57,6 @@ private:
     ss.clear();
     ss << parsed_data_.at(1);
     ss >> un_used >> http_host;
-    server_protocol = "TCP";
     server_addr = socket_.local_endpoint().address().to_string();
     server_port = std::to_string(socket_.local_endpoint().port());
     remote_addr = socket_.remote_endpoint().address().to_string();
@@ -76,7 +75,7 @@ private:
               setenv("REQUEST_METHOD", request_method.c_str(), 1);
               setenv("REQUEST_URI", request_uri.c_str(), 1);
               setenv("QUERY_STRING", query_string.c_str(), 1);
-              setenv("SERVER_PROTOCOL", server_protocol.c_str(), 1);
+              setenv("SERVER_PROTOCOL", http_version.c_str(), 1);
               setenv("HTTP_HOST", http_host.c_str(), 1);
               setenv("SERVER_ADDR", server_addr.c_str(), 1);
               setenv("SERVER_PORT", server_port.c_str(), 1);
@@ -104,7 +103,6 @@ private:
   std::string request_method;
   std::string request_uri;
   std::string query_string;
-  std::string server_protocol;
   std::string http_host;
   std::string server_addr;
   std::string server_port;
