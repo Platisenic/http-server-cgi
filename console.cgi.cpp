@@ -44,20 +44,22 @@ public:
 
   void do_read(){
     auto self(shared_from_this());
-    boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(read_buf_), "% ",
+    socket_.async_read_some(boost::asio::buffer(data_, max_length), 
     [this, self](boost::system::error_code ec, std::size_t length){
       if(!ec){
-        std::string data(read_buf_.substr(0, length));
-        read_buf_.erase(0, length);
+        std::string data(data_, data_+length);
         printShell(session, data);
-        do_write();
+        if(data.find("% ") != std::string::npos){
+          do_write();
+        }else{
+          do_read();
+        }
       }
     });
   }
 
   void do_write(){
     auto self(shared_from_this());
-    write_buf_.clear();
     std::getline(file_ifs_, write_buf_);
     write_buf_ += "\n";
     printCMD(session, write_buf_);
@@ -70,7 +72,8 @@ public:
   }
 private:
   int session;
-  std::string read_buf_;
+  enum { max_length = 1024 };
+  char data_[max_length];
   std::string write_buf_;
   tcp::resolver resolver_;
   tcp::resolver::iterator endpoint_iterator_;
