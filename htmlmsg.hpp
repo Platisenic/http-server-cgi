@@ -3,7 +3,7 @@
 #include <string>
 #include <boost/algorithm/string/replace.hpp>
 
-void escape(std::string &content){
+void escape(std::string& content) {
     boost::replace_all(content, "&", "&amp;");
     boost::replace_all(content, "\r", "");
     boost::replace_all(content, "\n", "&NewLine;");
@@ -13,34 +13,34 @@ void escape(std::string &content){
     boost::replace_all(content, "\"", "&#34;");
 }
 
-void printShell(int session, std::string content){
+void printShell(int session, std::string content) {
     escape(content);
     std::cout << "<script>document.getElementById('s" + std::to_string(session) + "').innerHTML += '" + content + "';</script>\n";
     std::cout.flush();
 }
 
-void printCMD(int session, std::string content){
+void printCMD(int session, std::string content) {
     escape(content);
     std::cout << "<script>document.getElementById('s" + std::to_string(session) + "').innerHTML += '<b>" + content + "</b>';</script>\n";
     std::cout.flush();
 }
 
-void printTableTitle(int session, std::string host, std::string port){
+void printTableTitle(int session, std::string host, std::string port) {
     std::string url = host + ":" + port;
     std::cout << "<script>document.getElementById('s" + std::to_string(session)  + "title').innerHTML += '"+ url  +"';</script>\n";
     std::cout.flush();
 }
 
-void printHeader(){
+void printHeader() {
     std::cout << "Content-type: text/html\r\n\r\n";
 }
 
-void printHtmlHead(){
+void printHtmlHead() {
     std::cout << "<!DOCTYPE html>\n"
               << "<html lang=\"en\">\n";
 }
 
-void printBodyHead(){
+void printBodyHead() {
     std::cout <<    "<head>\n"
               <<        "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
               <<        "<title>NP Project 3 Sample Console</title>\n"
@@ -77,7 +77,7 @@ void printBodyHead(){
               <<    "</head>\n";
 }
 
-void printBody(){
+void printBody() {
     std::cout <<    "<body>\n"
               <<        "<table class=\"table table-dark table-bordered\">\n"
               <<        "<thead>\n"
@@ -112,11 +112,11 @@ void printBody(){
               <<    "</body>\n";
 }
 
-void printHtmlEnd(){
+void printHtmlEnd() {
     std::cout <<"</html>\n";
 }
 
-void printHtmltemplate(){
+void printHtmltemplate() {
     printHeader();
     printHtmlHead();
     printBodyHead();

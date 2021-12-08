@@ -7,73 +7,73 @@
 
 using boost::asio::ip::tcp;
 
-class tcp_connection : public std::enable_shared_from_this<tcp_connection>
-{
-public:
-  tcp_connection(boost::asio::io_context& io_context, int session, std::string input_file)
-    : session(session),
-      resolver_(io_context),
-      socket_(io_context),
-      file_ifs_(input_file.c_str())
-      {}
+class tcp_connection : public std::enable_shared_from_this<tcp_connection> {
+ public:
+  tcp_connection(boost::asio::io_context& io_context, int session, std::string input_file) :
+    session(session),
+    resolver_(io_context),
+    socket_(io_context),
+    file_ifs_(input_file.c_str())
+    {}
 
-  void start(std::string host , std::string port){
+  void start(std::string host , std::string port) {
     do_resolve(host, port);
   }
-  
-  void do_resolve(std::string host , std::string port){
+
+  void do_resolve(std::string host , std::string port) {
     auto self(shared_from_this());
     resolver_.async_resolve(host, port,
     [this, self](boost::system::error_code ec, tcp::resolver::iterator endpoint_iterator){
-      if(!ec){
+      if (!ec) {
         endpoint_iterator_ = endpoint_iterator;
         do_connect();
       }
     });
   }
 
-  void do_connect(){
+  void do_connect() {
     auto self(shared_from_this());
     socket_.async_connect(*endpoint_iterator_,
     [this, self](boost::system::error_code ec){
-      if(!ec){
+      if (!ec) {
         do_read();
       }
     });
   }
 
-  void do_read(){
+  void do_read() {
     auto self(shared_from_this());
-    socket_.async_read_some(boost::asio::buffer(data_, max_length), 
+    socket_.async_read_some(boost::asio::buffer(data_, MaxLengthk),
     [this, self](boost::system::error_code ec, std::size_t length){
-      if(!ec){
+      if (!ec) {
         std::string data(data_, data_+length);
         printShell(session, data);
-        if(data.find("% ") != std::string::npos){
+        if (data.find("% ") != std::string::npos) {
           do_write();
-        }else{
+        } else {
           do_read();
         }
       }
     });
   }
 
-  void do_write(){
+  void do_write() {
     auto self(shared_from_this());
     std::getline(file_ifs_, write_buf_);
     write_buf_ += "\n";
     printCMD(session, write_buf_);
     boost::asio::async_write(socket_, boost::asio::dynamic_buffer(write_buf_),
     [this, self](boost::system::error_code ec, std::size_t /*length*/){
-      if(!ec){
+      if (!ec) {
         do_read();
       }
     });
   }
-private:
+
+ private:
   int session;
-  enum { max_length = 1024 };
-  char data_[max_length];
+  enum { MaxLengthk = 1024 };
+  char data_[MaxLengthk];
   std::string write_buf_;
   tcp::resolver resolver_;
   tcp::resolver::iterator endpoint_iterator_;
@@ -83,17 +83,17 @@ private:
 
 struct connection_info{
   connection_info() {}
-  void insert_element(char hpf, std::string value){
+  void insert_element(char hpf, std::string value) {
       value.erase(0, 1);
-    if(hpf == 'h'){
+    if (hpf == 'h') {
       host = value;
-    }else if(hpf == 'p'){
+    } else if (hpf == 'p') {
       port = value;
-    }else if(hpf == 'f'){
+    } else if (hpf == 'f') {
       filename = "test_case/" + value;
     }
   }
-  bool is_valid(){
+  bool is_valid() {
     return !host.empty() && !port.empty() && !filename.empty();
   }
   std::string host;
@@ -101,21 +101,21 @@ struct connection_info{
   std::string filename;
 };
 
-int main(){
-  try{
+int main() {
+  try {
     boost::asio::io_context io_context;
     std::string query_string(getenv("QUERY_STRING"));
     std::stringstream ss(query_string);
     std::string parsed_string;
     connection_info conn_infos[5];
-    while(std::getline(ss, parsed_string, '&')){
+    while (std::getline(ss, parsed_string, '&')) {
       conn_infos[parsed_string[1]-'0'].insert_element(parsed_string[0], parsed_string.substr(2));
     }
 
     printHtmltemplate();
 
-    for(int i=0 ; i<5; i++){
-      if(conn_infos[i].is_valid()){
+    for (int i = 0 ; i < 5; i++) {
+      if (conn_infos[i].is_valid()) {
         printTableTitle(i, conn_infos[i].host, conn_infos[i].port);
         std::make_shared<tcp_connection>(io_context, i, conn_infos[i].filename)
           ->start(conn_infos[i].host, conn_infos[i].port);
@@ -123,7 +123,7 @@ int main(){
     }
 
     io_context.run();
-  }catch (std::exception& e){
+  } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }
   return 0;
