@@ -13,7 +13,6 @@ sudo apt-get install libboost-all-dev
 ## How to use
 
 1. Build from source
-![aaa](https://user-images.githubusercontent.com/69299037/192147308-145d83df-23b9-46ff-bd46-23c473e6f36c.png)
 
 ```shell
 cd httpserver_cgi
