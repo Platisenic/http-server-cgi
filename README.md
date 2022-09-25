@@ -15,7 +15,7 @@ sudo apt-get install libboost-all-dev
 1. Build from source
 
 ```shell
-cd httpserver_cgi
+cd http-server-cgi
 make
 ```
 
